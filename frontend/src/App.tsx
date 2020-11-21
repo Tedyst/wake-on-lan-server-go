@@ -5,7 +5,7 @@ function App() {
 
   const queryString = window.location.search;
   const urlParams = new URLSearchParams(queryString);
-  const returnUrl = urlParams.get('returnUrl');
+  const redirectUrl = urlParams.get('redirectUrl');
   
   useEffect(() => {
     if(waiting === -1)
@@ -27,8 +27,11 @@ function App() {
     fetch("/wake" + queryString)
   }, [queryString])
 
-  if(waiting === -1)
-  return (<div>Redirecting to {returnUrl}</div>)
+  if(waiting === -1){
+    if(redirectUrl != null)
+      window.location.replace(redirectUrl);
+    return (<div>Redirecting to {redirectUrl}. If it does not work, the redirect has been setup improperly.</div>);
+  }
 
   return (<div>Waking up server...</div>);
 }

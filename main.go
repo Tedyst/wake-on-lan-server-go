@@ -16,11 +16,19 @@ import (
 )
 
 var (
-	addr = flag.String("addr", ":8080", "TCP address to listen to")
+	addr             = flag.String("addr", ":8080", "TCP address to listen to")
+	checkingInterval = flag.Int("timeout", 60, "Interval in which to not check a host")
+	dir              = flag.String("dir", "frontend/build/", "Directory to serve static files from")
 )
 
 func main() {
 	flag.Parse()
+
+	fs := &fasthttp.FS{
+		Root:       *dir,
+		IndexNames: []string{"index.html"},
+	}
+	fsHandler := fs.NewRequestHandler()
 
 	requestHandler := func(ctx *fasthttp.RequestCtx) {
 		switch string(ctx.Path()) {
@@ -31,7 +39,7 @@ func main() {
 		case "/wake":
 			wakeUp(ctx)
 		default:
-			noFunction(ctx)
+			fsHandler(ctx)
 		}
 	}
 
@@ -61,7 +69,25 @@ func verifyResponse(ctx *fasthttp.RequestCtx) {
 		wrongResponseString(ctx, "Invalid port")
 		return
 	}
+
+	if isRecentlyPinged(host) {
+		ctx.SetStatusCode(fasthttp.StatusOK)
+		return
+	}
+	pinger := ping.New(host)
+	pinger.Count = 1
+	pinger.Timeout = time.Millisecond * 1000
+	err = pinger.Run()
+	if err == nil {
+		if pinger.Statistics().PacketsRecv == 1 {
+			addHost(host, pinger.Statistics().AvgRtt)
+			ctx.SetStatusCode(fasthttp.StatusOK)
+			return
+		}
+	}
+
 	redirectstring := fmt.Sprintf("/?ip=%s&address=%s&port=%s", host, address, fmt.Sprint(port))
+	log.Print(redirectstring)
 	ctx.Redirect(redirectstring, fasthttp.StatusTemporaryRedirect)
 }
 
@@ -96,6 +122,15 @@ func pingResponse(ctx *fasthttp.RequestCtx) {
 
 	if ip == nil {
 		wrongResponseString(ctx, "Invalid IP")
+		return
+	}
+
+	if isRecentlyPinged(host) {
+		response := &jsonResponse{
+			Success: true,
+		}
+		str, _ := json.Marshal(response)
+		fmt.Fprintf(ctx, "%s", str)
 		return
 	}
 	pinger := ping.New(host)
