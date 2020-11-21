@@ -61,13 +61,13 @@ func verifyResponse(ctx *fasthttp.RequestCtx) {
 		wrongResponseString(ctx, "Invalid port")
 		return
 	}
-	redirectstring := fmt.Sprintf("/?host=%s&ip=%s&address=%s&port=%s", host, ip, address, fmt.Sprint(port))
+	redirectstring := fmt.Sprintf("/?ip=%s&address=%s&port=%s", host, address, fmt.Sprint(port))
 	ctx.Redirect(redirectstring, fasthttp.StatusTemporaryRedirect)
 }
 
 func wrongResponseError(ctx *fasthttp.RequestCtx, err error) {
 	ctx.SetContentType("application/json")
-	ctx.SetStatusCode(fasthttp.StatusUnauthorized)
+	ctx.SetStatusCode(fasthttp.StatusBadRequest)
 	response := &jsonResponse{
 		Success: false,
 		Error:   fmt.Sprintf("%s", err),
@@ -79,7 +79,7 @@ func wrongResponseError(ctx *fasthttp.RequestCtx, err error) {
 
 func wrongResponseString(ctx *fasthttp.RequestCtx, err string) {
 	ctx.SetContentType("application/json")
-	ctx.SetStatusCode(fasthttp.StatusUnauthorized)
+	ctx.SetStatusCode(fasthttp.StatusBadRequest)
 	response := &jsonResponse{
 		Success: false,
 		Error:   err,
@@ -108,6 +108,7 @@ func pingResponse(ctx *fasthttp.RequestCtx) {
 	}
 	if pinger.Statistics().PacketsRecv == 0 {
 		wrongResponseString(ctx, "System not started yet")
+		ctx.SetStatusCode(fasthttp.StatusOK)
 		return
 	}
 	response := &jsonResponse{
