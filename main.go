@@ -43,6 +43,7 @@ func main() {
 		}
 	}
 
+	log.Print("Starting server")
 	if err := fasthttp.ListenAndServe(*addr, requestHandler); err != nil {
 		log.Fatalf("Error in ListenAndServe: %s", err)
 	}
