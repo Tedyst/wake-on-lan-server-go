@@ -16,9 +16,10 @@ import (
 
 var (
 	addr             = flag.String("addr", ":8080", "TCP address to listen to")
+	externalAddress  = flag.String("externaladdress", "https://wakeup.stoicatedy.ovh", "External address of this server")
 	checkingInterval = flag.Int("timeout", 60, "Interval in which to not check a host")
 	dir              = flag.String("dir", "frontend/build/", "Directory to serve static files from")
-	port             = flag.String("port", "9", "Port to send WoL packet")
+	wolPort          = flag.String("wolport", "9", "Port to send WoL packet")
 	broadcastAddress = flag.String("broadcast", "192.168.10.255", "IP for the broadcast")
 	debug            = flag.Bool("debug", false, "Debug Mode")
 )
@@ -84,7 +85,7 @@ func verifyResponse(ctx *fasthttp.RequestCtx) {
 		}
 	}
 
-	redirectstring := fmt.Sprintf("/?ip=%s&address=%s&redirectURL=%s", host, address, redirectURL)
+	redirectstring := fmt.Sprintf("%s/?ip=%s&address=%s&redirectURL=%s", *externalAddress, host, address, redirectURL)
 	log.Print(redirectstring)
 	ctx.Redirect(redirectstring, fasthttp.StatusTemporaryRedirect)
 }
@@ -161,7 +162,7 @@ func wakeUp(ctx *fasthttp.RequestCtx) {
 		wrongResponseError(ctx, err)
 		return
 	}
-	err = packet.SendPort(*broadcastAddress, *port)
+	err = packet.SendPort(*broadcastAddress, *wolPort)
 	if err != nil {
 		wrongResponseError(ctx, err)
 		return
