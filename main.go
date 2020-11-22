@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"strconv"
 	"time"
 
 	"github.com/go-ping/ping"
@@ -19,6 +18,8 @@ var (
 	addr             = flag.String("addr", ":8080", "TCP address to listen to")
 	checkingInterval = flag.Int("timeout", 60, "Interval in which to not check a host")
 	dir              = flag.String("dir", "frontend/build/", "Directory to serve static files from")
+	port             = flag.String("port", "9", "Port to send WoL packet")
+	broadcastAddress = flag.String("broadcast", "192.168.10.255", "IP for the broadcast")
 )
 
 func main() {
@@ -61,15 +62,6 @@ func verifyResponse(ctx *fasthttp.RequestCtx) {
 		return
 	}
 	address := string(ctx.QueryArgs().Peek("address"))
-	port, err := strconv.Atoi(string(ctx.QueryArgs().Peek("port")))
-	if err != nil {
-		wrongResponseString(ctx, "Port is not defined")
-		return
-	}
-	if port < 0 || port > 65535 {
-		wrongResponseString(ctx, "Invalid port")
-		return
-	}
 
 	if isRecentlyPinged(host) {
 		ctx.SetStatusCode(fasthttp.StatusOK)
@@ -78,7 +70,7 @@ func verifyResponse(ctx *fasthttp.RequestCtx) {
 	pinger := ping.New(host)
 	pinger.Count = 1
 	pinger.Timeout = time.Millisecond * 1000
-	err = pinger.Run()
+	err := pinger.Run()
 	if err == nil {
 		if pinger.Statistics().PacketsRecv == 1 {
 			addHost(host, pinger.Statistics().AvgRtt)
@@ -87,7 +79,7 @@ func verifyResponse(ctx *fasthttp.RequestCtx) {
 		}
 	}
 
-	redirectstring := fmt.Sprintf("/?ip=%s&address=%s&port=%s", host, address, fmt.Sprint(port))
+	redirectstring := fmt.Sprintf("/?ip=%s&address=%s", host, address)
 	log.Print(redirectstring)
 	ctx.Redirect(redirectstring, fasthttp.StatusTemporaryRedirect)
 }
@@ -157,29 +149,14 @@ func pingResponse(ctx *fasthttp.RequestCtx) {
 func wakeUp(ctx *fasthttp.RequestCtx) {
 	ctx.SetContentType("application/json")
 
-	host := string(ctx.QueryArgs().Peek("ip"))
-	ip := net.ParseIP(host)
-	if ip == nil {
-		wrongResponseString(ctx, "Invalid IP")
-		return
-	}
 	address := string(ctx.QueryArgs().Peek("address"))
-	port, err := strconv.Atoi(string(ctx.QueryArgs().Peek("port")))
-	if err != nil {
-		wrongResponseString(ctx, "Port is not defined")
-		return
-	}
-	if port < 0 || port > 65535 {
-		wrongResponseString(ctx, "Invalid port")
-		return
-	}
 
 	packet, err := gowol.NewMagicPacket(address)
 	if err != nil {
 		wrongResponseError(ctx, err)
 		return
 	}
-	err = packet.SendPort(host, fmt.Sprint(port))
+	err = packet.SendPort(*broadcastAddress, *port)
 	if err != nil {
 		wrongResponseError(ctx, err)
 		return
