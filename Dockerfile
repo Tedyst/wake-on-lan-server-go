@@ -9,6 +9,8 @@ COPY frontend .
 RUN npm ci && npm run build
 
 FROM alpine:latest
+LABEL org.opencontainers.image.source "https://github.com/Tedyst/wake-on-lan-server-go"
+
 WORKDIR /app
 COPY --from=backend /app/wake-on-lan-server-go /app/wake-on-lan-server-go
 COPY --from=frontend /app/build /app/frontend/build
