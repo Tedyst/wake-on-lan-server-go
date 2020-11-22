@@ -3,7 +3,7 @@
 Basic format
 
 ```
-http://host?ip=192.168.10.108&address=AA:BB:CC:DD:EE:FF&port=9&redirectUrl=https://stoicatedy.ovh
+http://host?ip=192.168.10.108&address=AA:BB:CC:DD:EE:FF&redirectUrl=https://stoicatedy.ovh
 ```
 
 It works by serving a React app that does the following things:
