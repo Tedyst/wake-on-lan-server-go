@@ -20,6 +20,7 @@ var (
 	dir              = flag.String("dir", "frontend/build/", "Directory to serve static files from")
 	port             = flag.String("port", "9", "Port to send WoL packet")
 	broadcastAddress = flag.String("broadcast", "192.168.10.255", "IP for the broadcast")
+	debug            = flag.Bool("debug", false, "Debug Mode")
 )
 
 func main() {
@@ -32,6 +33,9 @@ func main() {
 	fsHandler := fs.NewRequestHandler()
 
 	requestHandler := func(ctx *fasthttp.RequestCtx) {
+		if *debug {
+			log.Printf("IP: %s, RequestURI:%s", ctx.RemoteIP(), ctx.RequestURI())
+		}
 		switch string(ctx.Path()) {
 		case "/verify":
 			verifyResponse(ctx)
@@ -62,6 +66,7 @@ func verifyResponse(ctx *fasthttp.RequestCtx) {
 		return
 	}
 	address := string(ctx.QueryArgs().Peek("address"))
+	redirectURL := string(ctx.QueryArgs().Peek("redirectURL"))
 
 	if isRecentlyPinged(host) {
 		ctx.SetStatusCode(fasthttp.StatusOK)
@@ -79,7 +84,7 @@ func verifyResponse(ctx *fasthttp.RequestCtx) {
 		}
 	}
 
-	redirectstring := fmt.Sprintf("/?ip=%s&address=%s", host, address)
+	redirectstring := fmt.Sprintf("/?ip=%s&address=%s&redirectURL=%s", host, address, redirectURL)
 	log.Print(redirectstring)
 	ctx.Redirect(redirectstring, fasthttp.StatusTemporaryRedirect)
 }
